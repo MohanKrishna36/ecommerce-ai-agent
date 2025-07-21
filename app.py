@@ -1,20 +1,24 @@
-from flask import Flask, request, jsonify
-import sqlite3
+import os
 import requests
+import sqlite3
+from dotenv import load_dotenv
+from flask import Flask, request, jsonify, render_template
+
+# Load API key from .env file
+load_dotenv()
 
 app = Flask(__name__)
-
-# DB setup
 conn = sqlite3.connect("ecommerce.db", check_same_thread=False)
 
-# OpenRouter setup
-API_KEY = "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"
-MODEL = "openai/gpt-3.5-turbo"  # ✅ Add this line
+API_KEY = os.getenv("OPENROUTER_API_KEY")
+MODEL = "openai/gpt-3.5-turbo"
 URL = "https://openrouter.ai/api/v1/chat/completions"
+
 HEADERS = {
-    "Authorization": "Bearer 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",
+    "Authorization": f"Bearer {API_KEY}",  # ✅ ADD BACK 'Bearer '
     "Content-Type": "application/json"
 }
+
 
 
 # Prompt builder
@@ -36,23 +40,23 @@ Only respond with SQL. No markdown or explanation.
 # LLM call
 def question_to_sql(question):
     prompt = build_prompt(question)
-
     payload = {
         "model": MODEL,
         "messages": [{"role": "user", "content": prompt}]
     }
-
     response = requests.post(URL, headers=HEADERS, json=payload)
 
     if response.status_code == 200:
-        return response.json()['choices'][0]['message']['content'].strip("```sql").strip("```").strip()
+        try:
+            return response.json()['choices'][0]['message']['content'].strip("```sql").strip("```").strip()
+        except Exception:
+            print("⚠️ Unexpected response:", response.json())
+            return None
     else:
-        print("❌ LLM ERROR:", response.status_code)
-        print(response.text)
+        print("❌ LLM ERROR:", response.status_code, response.text)
         return None
 
-
-# API route
+# API routes
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.get_json()
@@ -74,10 +78,13 @@ def ask():
         return jsonify({"query": sql_query, "results": results})
     except Exception as e:
         return jsonify({"error": str(e), "query": sql_query}), 500
-    
+
 @app.route("/", methods=["GET"])
 def home():
-    return "✅ API is running. Use POST /ask with a question."
+    return render_template("index.html")
+
+
+#print("🔑 Loaded API Key:", API_KEY)
 
 
 if __name__ == "__main__":
