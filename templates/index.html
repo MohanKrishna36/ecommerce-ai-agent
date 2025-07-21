@@ -2,66 +2,74 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SQL Assistant</title>
+    <title>AI SQL Assistant</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 700px;
-            margin: 50px auto;
-            padding: 20px;
+            padding: 2rem;
         }
-
-        h1 {
-            color: #2d2d2d;
+        input, button {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            width: 100%;
         }
-
-        input[type="text"] {
-            width: 80%;
-            padding: 10px;
-            font-size: 16px;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-        }
-
         pre {
-            background-color: #f4f4f4;
-            padding: 10px;
-            white-space: pre-wrap;
-            border: 1px solid #ccc;
-            margin-top: 20px;
+            background: #f4f4f4;
+            padding: 1rem;
+            border-radius: 6px;
         }
     </style>
 </head>
 <body>
-    <h1>Ask Your Question</h1>
-    <form id="ask-form">
-        <input type="text" id="question" placeholder="e.g. What is total sales?" required>
-        <button type="submit">Ask</button>
-    </form>
+    <h2>Ask Your Data</h2>
+    <input id="question" type="text" placeholder="E.g. What is my total sales?" />
+    <button onclick="askQuestion()">Ask</button>
 
-    <pre id="response-area"></pre>
+    <h3>Generated SQL</h3>
+    <pre id="sql"></pre>
+
+    <h3>Results</h3>
+    <pre id="results"></pre>
+
+    <div id="chart" style="width:100%; max-width:700px; height:400px;"></div>
 
     <script>
-        document.getElementById("ask-form").addEventListener("submit", async function (e) {
-            e.preventDefault();
-            const question = document.getElementById("question").value;
-            const responseArea = document.getElementById("response-area");
-            responseArea.textContent = "⏳ Generating SQL and fetching results...";
+        async function askQuestion() {
+    const question = document.getElementById('question').value;
+    const res = await fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+    });
 
-            const res = await fetch("/ask", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ question })
+    const data = await res.json();
+    document.getElementById('sql').textContent = data.query || 'No SQL generated';
+
+    if (data.results && Array.isArray(data.results) && data.results.length > 0) {
+        document.getElementById('results').textContent = JSON.stringify(data.results, null, 2);
+
+        const keys = Object.keys(data.results[0]);
+        if (keys.length === 2) {
+            const x = data.results.map(row => row[keys[0]]);
+            const y = data.results.map(row => row[keys[1]]);
+            Plotly.newPlot('chart', [{
+                type: 'bar',
+                x, y
+            }], {
+                title: `${keys[1]} by ${keys[0]}`,
+                xaxis: { title: keys[0] },
+                yaxis: { title: keys[1] }
             });
+        } else {
+            document.getElementById('chart').innerHTML = "<p>ℹ️ Chart needs exactly 2 columns in the result.</p>";
+        }
+    } else {
+        document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('chart').innerHTML = "<p>⚠️ No data available to visualize.</p>";
+    }
+}
 
-            const data = await res.json();
-            responseArea.textContent = JSON.stringify(data, null, 2);
-        });
     </script>
 </body>
 </html>
