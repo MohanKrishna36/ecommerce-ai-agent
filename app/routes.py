@@ -12,6 +12,7 @@ def home():
 @main.route("/ask", methods=["POST"])
 def ask():
     data = request.get_json()
+    print("Received data:", data)  # Debugging line
     question = data.get("question")
 
     if not question:
