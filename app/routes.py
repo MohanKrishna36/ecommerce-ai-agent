@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template
-from .llm import question_to_sql
+from .llm import question_to_sql, call_llm
 from .db import get_db_connection
-from .utils import generate_chart
+from .utils import generate_chart, generate_summary, build_natural_language_prompt, generate_chart_prompt, exec_python_code
 
 main = Blueprint("main", __name__)
 
@@ -32,12 +32,22 @@ def ask():
         # Generate chart (optional)
         chart = generate_chart(columns, results)
 
-
+        # Generate human-readable summary
+        prompt = build_natural_language_prompt(question, sql_query, results)
+        chart_prompt = generate_chart_prompt(question, sql_query, results)
+        english_response = call_llm(prompt, 
+                                    system="You are a helpful assistant that explains SQL query results in simple English, without using terms like sql or anything.",
+                                    model="openai/gpt-3.5-turbo")
+        chart_code = call_llm(chart_prompt, 
+                                  system="You are a helpful assistant that generates charts based on SQL query results.",
+                                  model="openai/gpt-3.5-turbo")
+        
+        image = exec_python_code(chart_code)
         return jsonify({
             "query": sql_query,
             "results": results,
-            "chart": chart,
-          
+            "chart": image,
+            "summary": english_response or "No summary generated"
         })
 
     except Exception as e:

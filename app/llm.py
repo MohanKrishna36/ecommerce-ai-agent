@@ -28,10 +28,12 @@ Use only the following tables and columns:
 the below is the example data for the table:
 date,item_id,total_sales,total_units_ordered
 2025-06-01,0,309.99,1
+date is in text format covert it into date format in the sql.
 
 2. ad_sales(date, item_id, ad_sales, impressions, ad_spend, clicks, units_sold)
 date,item_id,ad_sales,impressions,ad_spend,clicks,units_sold
 2025-06-01,0,332.96,1963,16.87,8,3
+date is in text format covert it into date format in the sql.
 
 3. eligibility(eligibility_datetime_utc, item_id, eligibility, message)
 2025-06-04 8:50:07,29,0,This product's cost to Amazon does not allow us to meet customers’ pricing expectations. Consider reducing the cost. It may take a few weeks for your product to become eligible to advertise after you reduce the cost.

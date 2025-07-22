@@ -1,305 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Ecommerce AI Agent</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 2rem;
-      color: #333;
-    }
-
-    .container {
-      max-width: 720px;
-      margin: auto;
-      background: #fff;
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
-      animation: fadeIn 0.8s ease-in-out;
-    }
-
-    h2 {
-      text-align: center;
-      font-size: 2rem;
-      color: #1a202c;
-      animation: slideIn 0.8s ease-in-out;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    h2::after {
-      content: '🤖';
-      animation: float 2s infinite ease-in-out;
-    }
-
-    .toggle-switch {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-    }
-
-    .toggle-label {
-      font-weight: 500;
-      color: #4a5568;
-    }
-
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 40px;
-      height: 22px;
-    }
-
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: 0.4s;
-      border-radius: 22px;
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 16px;
-      width: 16px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: 0.4s;
-      border-radius: 50%;
-    }
-
-    input:checked + .slider {
-      background-color: #3182ce;
-    }
-
-    input:checked + .slider:before {
-      transform: translateX(18px);
-    }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      font-size: 1rem;
-      margin-bottom: 1rem;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-      transition: border 0.3s;
-    }
-
-    input:focus {
-      border-color: #4299e1;
-      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
-      outline: none;
-    }
-
-    button {
-      width: 100%;
-      padding: 0.75rem;
-      font-size: 1rem;
-      background: #3182ce;
-      color: white;
-      font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    button:hover {
-      background: #2b6cb0;
-    }
-
-    .loader {
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid #3182ce;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 1.5rem auto;
-      display: none;
-    }
-
-    pre {
-      background: #f1f5f9;
-      padding: 1rem;
-      border-radius: 10px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      overflow-x: auto;
-      margin-top: 1rem;
-      font-size: 0.95rem;
-    }
-
-    #chart {
-      margin-top: 2rem;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    @keyframes blink {
-      0%, 50% { opacity: 1; }
-      51%, 100% { opacity: 0; }
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-15px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-5px); }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h2>Ecommerce AI Agent</h2>
-
-    <div class="toggle-switch">
-      <label class="switch">
-        <input type="checkbox" id="devMode" onchange="toggleDevMode()" />
-        <span class="slider"></span>
-      </label>
-      <span class="toggle-label">Developer Mode</span>
-    </div>
-
-    <input id="question" type="text" placeholder="E.g. What is my total sales every month?" />
-    <button onclick="askQuestion()">Ask</button>
-
-    <div class="loader" id="loader"></div>
-
-    <div id="sqlSection" class="hidden">
-      <h3>Generated SQL</h3>
-      <pre id="sql">Waiting for question...</pre>
-    </div>
-
-    <div id="resultsSection" class="hidden">
-      <h3>Results</h3>
-      <pre id="results">No results yet.</pre>
-    </div>
-
-    <h3>AI Agent</h3>
-    <pre id="summary">...</pre>
-
-    <div id="chart" style="width:100%; height:400px;"></div>
-  </div>
-
-  <script>
-    function typeEffect(element, text, speed = 25) {
-      element.textContent = '';
-      let i = 0;
-      const interval = setInterval(() => {
-        element.textContent += text.charAt(i);
-        i++;
-        if (i === text.length) clearInterval(interval);
-      }, speed);
-    }
-
-    function toggleDevMode() {
-      const devMode = document.getElementById('devMode').checked;
-      document.getElementById('sqlSection').classList.toggle('hidden', !devMode);
-      document.getElementById('resultsSection').classList.toggle('hidden', !devMode);
-    }
-
-    async function askQuestion() {
-      const question = document.getElementById('question').value;
-      const loader = document.getElementById('loader');
-      const summary = document.getElementById('summary');
-      const sqlBox = document.getElementById('sql');
-      const resultsBox = document.getElementById('results');
-      const chartBox = document.getElementById('chart');
-
-      loader.style.display = 'block';
-      sqlBox.textContent = '';
-      resultsBox.textContent = '';
-      summary.textContent = '...';
-      chartBox.innerHTML = '';
-
-      const res = await fetch('/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question })
-      });
-
-      const data = await res.json();
-      loader.style.display = 'none';
-
-      const devMode = document.getElementById('devMode').checked;
-      if (devMode) {
-        document.getElementById('sqlSection').classList.remove('hidden');
-        document.getElementById('resultsSection').classList.remove('hidden');
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ecommerce AI Agent</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #f4f6f8;
+        margin: 0;
+        padding: 2rem;
+        color: #333;
       }
 
-      sqlBox.textContent = data.query || 'No SQL generated';
-
-      if (data.summary) {
-        typeEffect(summary, data.summary);
-      } else {
-        summary.textContent = 'No Summary generated';
+      .container {
+        max-width: 720px;
+        margin: auto;
+        background: #fff;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+        animation: fadeIn 0.8s ease-in-out;
       }
 
-      if (data.results && Array.isArray(data.results) && data.results.length > 0) {
-        resultsBox.textContent = JSON.stringify(data.results, null, 2);
+      h2 {
+        text-align: center;
+        font-size: 2rem;
+        color: #1a202c;
+        animation: slideIn 0.8s ease-in-out;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+      }
 
-        const keys = Object.keys(data.results[0]);
-        if (keys.length === 2) {
-          const x = data.results.map(row => row[keys[0]]);
-          const y = data.results.map(row => row[keys[1]]);
-          Plotly.newPlot('chart', [{
-            type: 'bar',
-            x, y,
-            marker: { color: '#3182ce' }
-          }], {
-            title: ${keys[1]} by ${keys[0]},
-            xaxis: { title: keys[0] },
-            yaxis: { title: keys[1] }
-          });
-          
-        } else {
-          chartBox.innerHTML = "<p>ℹ Chart needs exactly 2 columns in the result.</p>";
+      h2::after {
+        content: "🤖";
+        animation: float 2s infinite ease-in-out;
+      }
+
+      .toggle-switch {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+      }
+
+      .toggle-label {
+        font-weight: 500;
+        color: #4a5568;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 22px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 22px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: #3182ce;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(18px);
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+        transition: border 0.3s;
+      }
+
+      input:focus {
+        border-color: #4299e1;
+        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+        outline: none;
+      }
+
+      button {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+        background: #3182ce;
+        color: white;
+        font-weight: bold;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background: #2b6cb0;
+      }
+
+      .loader {
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #3182ce;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 1.5rem auto;
+        display: none;
+      }
+
+      pre {
+        background: #f1f5f9;
+        padding: 1rem;
+        border-radius: 10px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-x: auto;
+        margin-top: 1rem;
+        font-size: 0.95rem;
+      }
+
+      #chart {
+        margin-top: 2rem;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @keyframes blink {
+        0%,
+        50% {
+          opacity: 1;
         }
-      } else {
-        resultsBox.textContent = JSON.stringify(data, null, 2);
+        51%,
+        100% {
+          opacity: 0;
+        }
       }
-    }
-  </script>
-</body>
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-15px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-5px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Ecommerce AI Agent</h2>
+
+      <div class="toggle-switch">
+        <label class="switch">
+          <input type="checkbox" id="devMode" onchange="toggleDevMode()" />
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Developer Mode</span>
+      </div>
+
+      <input
+        id="question"
+        type="text"
+        placeholder="E.g. What is my total sales every month?"
+      />
+      <button onclick="askQuestion()">Ask</button>
+
+      <div class="loader" id="loader"></div>
+
+      <div id="sqlSection" class="hidden">
+        <h3>Generated SQL</h3>
+        <pre id="sql">Waiting for question...</pre>
+      </div>
+
+      <div id="resultsSection" class="hidden">
+        <h3>Results</h3>
+        <pre id="results">No results yet.</pre>
+      </div>
+
+      <h3>AI Agent</h3>
+      <pre id="summary">...</pre>
+
+      <div id="chart" style="width: 100%; height: 400px"></div>
+    </div>
+
+    <script>
+      function typeEffect(element, text, speed = 25) {
+        element.textContent = "";
+        let i = 0;
+        const interval = setInterval(() => {
+          element.textContent += text.charAt(i);
+          i++;
+          if (i === text.length) clearInterval(interval);
+        }, speed);
+      }
+
+      function toggleDevMode() {
+        const devMode = document.getElementById("devMode").checked;
+        document
+          .getElementById("sqlSection")
+          .classList.toggle("hidden", !devMode);
+        document
+          .getElementById("resultsSection")
+          .classList.toggle("hidden", !devMode);
+      }
+
+      async function askQuestion() {
+        const question = document.getElementById("question").value;
+        const loader = document.getElementById("loader");
+        const summary = document.getElementById("summary");
+        const sqlBox = document.getElementById("sql");
+        const resultsBox = document.getElementById("results");
+        const chartBox = document.getElementById("chart");
+
+        loader.style.display = "block";
+        sqlBox.textContent = "";
+        resultsBox.textContent = "";
+        summary.textContent = "...";
+        chartBox.innerHTML = "";
+
+        const res = await fetch("/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+
+        const data = await res.json();
+        loader.style.display = "none";
+
+        const devMode = document.getElementById("devMode").checked;
+        if (devMode) {
+          document.getElementById("sqlSection").classList.remove("hidden");
+          document.getElementById("resultsSection").classList.remove("hidden");
+        }
+
+        sqlBox.textContent = data.query || "No SQL generated";
+
+        if (data.summary) {
+          typeEffect(summary, data.summary);
+        } else {
+          summary.textContent = "No Summary generated";
+        }
+
+        if (
+          data.results &&
+          Array.isArray(data.results) &&
+          data.results.length > 0
+        ) {
+          resultsBox.textContent = JSON.stringify(data.results, null, 2);
+
+          const keys = Object.keys(data.results[0]);
+          if (keys.length === 2) {
+            const x = data.results.map((row) => row[keys[0]]);
+            const y = data.results.map((row) => row[keys[1]]);
+            Plotly.newPlot(
+              "chart",
+              [
+                {
+                  type: "bar",
+                  x,
+                  y,
+                  marker: { color: "#3182ce" },
+                },
+              ],
+              {
+                title: `${keys[1]} by ${keys[0]}`,
+                xaxis: { title: keys[0] },
+                yaxis: { title: keys[1] },
+              }
+            );
+          } else {
+            chartBox.innerHTML =
+              "<p>ℹ Chart needs exactly 2 columns in the result.</p>";
+          }
+        } else {
+          resultsBox.textContent = JSON.stringify(data, null, 2);
+        }
+      }
+    </script>
+  </body>
 </html>
