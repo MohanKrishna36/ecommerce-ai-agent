@@ -5,7 +5,7 @@ import requests
 conn = sqlite3.connect("ecommerce.db")
 
 # OpenRouter API setup
-API_KEY = "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"
+API_KEY = "add ur openRouter api key"
 MODEL = "openai/gpt-3.5-turbo"
 URL = "https://openrouter.ai/api/v1/chat/completions"
 HEADERS = {
