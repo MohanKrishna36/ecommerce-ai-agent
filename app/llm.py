@@ -84,3 +84,26 @@ def question_to_sql(question):
         print("❌ LLM ERROR:", response.status_code)
         print(response.text)
         return None
+
+# API_KEY = os.getenv("OPENROUTER_API_KEY")
+def call_llm(prompt, system, model="openai/gpt-3.5-turbo"):
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+
+    if response.status_code == 200:
+        return response.json()['choices'][0]['message']['content']
+    else:
+        return f"Error from LLM API: {response.status_code} - {response.text}"
