@@ -15,39 +15,54 @@ HEADERS = {
 
 def build_prompt(question):
     return f"""
-You are an expert in SQLite. Given the following natural language query, generate a valid SQLite SQL query:
+You are an expert in SQLite. Given the following natural language query, generate a valid SQLite SQL query.
 
-User Query: "What is my total sales every month?"
+User Query: "{question}"
 
 Only return the SQL query. Do not use MySQL or PostgreSQL syntax. Use only SQLite-supported functions and syntax.
 
+You are restricted to use only the following tables and columns:
 
-Use only the following tables and columns:
+---
 
-1. total_sales(date, item_id, total_sales, total_units_ordered)
-the below is the example data for the table:
-date,item_id,total_sales,total_units_ordered
-2025-06-01,0,309.99,1
-date is in text format covert it into date format in the sql.
+1. total_sales(date, item_id, total_sales, total_units_ordered)  
+Example:
+date,item_id,total_sales,total_units_ordered  
+2025-06-01,0,309.99,1  
+→ Note: `date` is in TEXT format. Convert it into DATE format using DATE(date) or strftime('%Y-%m-%d', date)
 
-2. ad_sales(date, item_id, ad_sales, impressions, ad_spend, clicks, units_sold)
-date,item_id,ad_sales,impressions,ad_spend,clicks,units_sold
-2025-06-01,0,332.96,1963,16.87,8,3
-date is in text format covert it into date format in the sql.
+---
 
-3. eligibility(eligibility_datetime_utc, item_id, eligibility, message)
-2025-06-04 8:50:07,29,0,This product's cost to Amazon does not allow us to meet customers’ pricing expectations. Consider reducing the cost. It may take a few weeks for your product to become eligible to advertise after you reduce the cost.
-2025-06-04 8:50:07,270,1,
-2025-06-04 8:50:07,31,1,
-2025-06-04 8:50:07,26,1,
+2. ad_sales(date, item_id, ad_sales, impressions, ad_spend, clicks, units_sold)  
+Example:
+2025-06-01,0,332.96,1963,16.87,8,3  
+→ Note: `date` is in TEXT format. Convert it into DATE format using DATE(date) or strftime('%Y-%m-%d', date)
 
-these are the only tables and columns you can use. if user asks something you must use the columns which are available in the tables above.
-strictly use the columns in the tables above. do not use any other columns or tables.
-Only use the available functions in the sql, dont use functions which are not available in the sql.
-User question: {question}
-Strictly Dont use you own column names or table names. use only the columns and tables which are available in the above tables.
-Only respond with SQL. No markdown or explanation.
+To calculate **RoAS (Return on Ad Spend)**:
+- Use the formula: **RoAS = ad_sales / ad_spend**
+- Aggregate (SUM) `ad_sales` and `ad_spend` per group (e.g., by date or item) before dividing.
+- Example: `ROUND(SUM(ad_sales) / SUM(ad_spend), 2) AS roas`
+
+---
+
+3. eligibility(eligibility_datetime_utc, item_id, eligibility, message)  
+Example:
+2025-06-04 8:50:07,29,0,"This product's cost to Amazon does not allow us to meet customers’ pricing expectations."
+
+---
+
+Rules:
+- You MUST use only the listed tables and columns.
+- DO NOT invent or assume columns or tables not listed.
+- DO NOT use unsupported functions — only SQLite-compatible functions are allowed.
+- Convert all `date` text columns into proper DATE format using `DATE()` or `strftime()` when performing date-based grouping or filtering.
+- For RoAS-related queries, follow the formula provided above.
+- Your output should be a valid, executable SQLite SQL query only.
+- DO NOT include any explanation, comments, or markdown formatting — only raw SQL.
+
+Return only the SQL query.
 """
+
 
 def question_to_sql(question):
     prompt = build_prompt(question)
